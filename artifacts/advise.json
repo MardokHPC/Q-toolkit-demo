@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "tool": "poolkit_advise",
+  "trace": {"path": "artifacts\\trace.jsonl", "ops": 28, "allocs": 14, "sha256": "01ba5814eeacff8933f65cd69393a9d3d88e915ae35c9c62a27577ef0cde7570"},
+  "config": {"growth": 1.5, "chunk_bytes": 4194304, "min_class_bytes": 256, "max_class_bytes": 4194304, "power_of_two": true, "extra_sizes": []},
+  "classes": 36,
+  "waste": {"internal": 0, "tail": 0},
+  "peak": {"resident_bytes": 58720256, "blocks": 14},
+  "retention_bound_bytes": 150994944
+}

@@ -1,0 +1,36 @@
+{
+  "children": [],
+  "edges": [
+    [0, 1],
+    [0, 4],
+    [1, 2],
+    [2, 3],
+    [3, 8],
+    [4, 5],
+    [5, 6],
+    [6, 7],
+    [7, 8],
+    [8, 9],
+    [9, 10],
+    [10, 11],
+    [11, 12]
+  ],
+  "nodes": [
+    {"block": [256, 1, 1], "grid": [4096, 1, 1], "id": 0, "type": "kernel"},
+    {"block": [256, 1, 1], "grid": [4096, 1, 1], "id": 1, "type": "kernel"},
+    {"block": [256, 1, 1], "grid": [4096, 1, 1], "id": 2, "type": "kernel"},
+    {"block": [256, 1, 1], "grid": [4096, 1, 1], "id": 3, "type": "kernel"},
+    {"block": [256, 1, 1], "grid": [4096, 1, 1], "id": 4, "type": "kernel"},
+    {"block": [256, 1, 1], "grid": [4096, 1, 1], "id": 5, "type": "kernel"},
+    {"block": [256, 1, 1], "grid": [4096, 1, 1], "id": 6, "type": "kernel"},
+    {"block": [256, 1, 1], "grid": [4096, 1, 1], "id": 7, "type": "kernel"},
+    {"block": [256, 1, 1], "grid": [4096, 1, 1], "id": 8, "type": "kernel"},
+    {"block": [256, 1, 1], "grid": [4096, 1, 1], "id": 9, "type": "kernel"},
+    {"block": [256, 1, 1], "grid": [4096, 1, 1], "id": 10, "type": "kernel"},
+    {"block": [256, 1, 1], "grid": [4096, 1, 1], "id": 11, "type": "kernel"},
+    {"block": [256, 1, 1], "grid": [4096, 1, 1], "id": 12, "type": "kernel"}
+  ],
+  "schema_version": 1,
+  "source": {"kind": "capture"},
+  "weight_kind": "levels"
+}

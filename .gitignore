@@ -1,0 +1,13 @@
+# Build output
+build*/
+.vs/
+CMakeUserPresets.json
+
+# Personal protocol files (QMan): they live on disk, they never ship.
+AGENTS.md
+HANDOFF.md
+MASTERHANDOFF.md
+PROGETTO.json
+storico/
+tools/verifica_memoria.py
+tools/hooks/

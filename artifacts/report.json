@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "tool": "qtoolkit-demo",
+  "version": "0.1.0",
+  "pins": {
+    "cuda_timer": "v1.2.2",
+    "poolkit": "v1.0.0",
+    "ulpgrad": "v0.1.0",
+    "graph_lint": "v0.3.1"
+  },
+  "environment": {
+    "device": "NVIDIA GeForce RTX 2060 SUPER",
+    "compute_major": 7,
+    "compute_minor": 5,
+    "cuda_runtime": "12.6"
+  },
+  "graph": {
+    "clean": {
+      "nodes": 13,
+      "edges": 13,
+      "distinct_edges": 13,
+      "depth": 10,
+      "width": [
+        1,
+        2,
+        2,
+        2,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "minimal_edges": 13,
+      "redundant_edges": 0,
+      "findings": []
+    },
+    "pingpong": {
+      "nodes": 13,
+      "edges": 23,
+      "distinct_edges": 23,
+      "depth": 13,
+      "width": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "minimal_edges": 12,
+      "redundant_edges": 11,
+      "findings": [
+        {
+          "rule": "redundant-edge",
+          "severity": "warn",
+          "nodes": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12
+          ],
+          "message": "11 of 23 edges are implied by a longer path; the minimal DAG has 12 edges"
+        }
+      ]
+    }
+  },
+  "weights": {
+    "unit": "ns",
+    "zero_point_ns": 12864,
+    "warmup_runs": 10,
+    "measure_runs": 100,
+    "clamped": 0,
+    "median_ns": [
+      51360,
+      42224,
+      46032,
+      41760,
+      51616,
+      42480,
+      46160,
+      42576,
+      63520,
+      43296,
+      47104,
+      43232,
+      47104
+    ],
+    "path": [
+      0,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "path_ns": 349808
+  },
+  "pool_measured": {
+    "config": {
+      "chunk_bytes": 4194304,
+      "min_class_bytes": 256,
+      "max_class_bytes": 4194304,
+      "growth": 1.5,
+      "power_of_two": true
+    },
+    "requests": 14,
+    "bytes_requested": 58720256,
+    "chunks": 14,
+    "high_water_mark_bytes": 58720256,
+    "growth_count": 14,
+    "reuse_count": 0,
+    "large_path_count": 0,
+    "free_errors": 0,
+    "quarantined_blocks": 0
+  },
+  "advise": {
+    "config": {
+      "growth": 1.5,
+      "chunk_bytes": 4194304,
+      "min_class_bytes": 256,
+      "max_class_bytes": 4194304,
+      "power_of_two": true,
+      "extra_sizes": []
+    },
+    "classes": 36,
+    "ops": 28,
+    "allocs": 14,
+    "waste": {
+      "internal": 0,
+      "tail": 0
+    },
+    "peak_sim_bytes": 58720256,
+    "peak_blocks": 14,
+    "retention_bound_bytes": 150994944
+  }
+}

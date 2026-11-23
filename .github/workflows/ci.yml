@@ -1,0 +1,95 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+
+# §6 names three jobs: `host`, `cuda`, `gpu`.
+#
+# `host` is here: both operating systems, no toolkit, the verifier reconstructing
+# the committed report.
+#
+# `cuda` is here for Linux only. The NVIDIA keyring plus `cuda-toolkit-12-1` is
+# the documented install and needs no third-party action; the Windows half of
+# this job would, and the reference machine is Windows (`build-device.bat`), so
+# it waits for a pinned installer action rather than guessing one.
+#
+# `gpu` is written and commented at the bottom of this file: it needs a
+# self-hosted exclusive runner, a driver, and a check that no test times the
+# pipeline (§3.12).
+
+jobs:
+  host:
+    name: host (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-2022]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain
+        run: cmake --version
+
+      - name: Configure (no toolkit)
+        run: >
+          cmake -S . -B build
+          -DCMAKE_BUILD_TYPE=Release
+          -DQTOOLKIT_DEMO_WITH_CUDA=OFF
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Test
+        # poolkit registers its own entries even with its tests off: they are
+        # not ours and CI excludes them by name (§9). The verifier's exit codes
+        # and its reconstruction of the committed report are three of the
+        # entries below, so this step is also §6's `qtoolkit_verify
+        # artifacts/report.json`.
+        run: ctest --test-dir build -C Release --output-on-failure -E "^poolkit_"
+
+  cuda:
+    name: cuda (linux, no gpu)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: CUDA 12.1.1 toolkit
+        run: |
+          wget -q https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
+          sudo dpkg -i cuda-keyring_1.1-1_all.deb
+          sudo apt-get update
+          sudo apt-get install -y cuda-toolkit-12-1
+
+      - name: Toolchain
+        run: |
+          cmake --version
+          /usr/local/cuda-12.1/bin/nvcc --version
+
+      - name: Configure (CUDA, no GPU)
+        run: >
+          cmake -S . -B build
+          -DCMAKE_BUILD_TYPE=Release
+          -DQTOOLKIT_DEMO_WITH_CUDA=ON
+          -DCMAKE_CUDA_COMPILER=/usr/local/cuda-12.1/bin/nvcc
+          -DCMAKE_CUDA_ARCHITECTURES=75
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure -E "^poolkit_"
+
+# The GPU job, commented on purpose (§6): the pipeline is a command that writes
+# artifacts, not a ctest entry, because no test may assert a timing (§3.12).
+#
+#  gpu:
+#    name: gpu (self-hosted, exclusive)
+#    runs-on: [self-hosted, windows, gpu]
+#    steps:
+#      - uses: actions/checkout@v4
+#      - name: Run the pipeline and commit the artifacts
+#        run: build-device.bat
+#      - name: The verifier must reconstruct what the card just wrote
+#        run: build-dev\qtoolkit_verify.exe artifacts\report.json
