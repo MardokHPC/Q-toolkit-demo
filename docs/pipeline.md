@@ -11,8 +11,8 @@ each one has exactly one owner: a number that is not in `artifacts/report.json` 
 | 4 | workload → `artifacts/trace.jsonl` → poolkit_advise | `artifacts/advise.json` | implemented (M4) |
 | 5 | the five artifacts → `report.json` → `qtoolkit_verify` | `artifacts/report.json` | M5 |
 
-The reasoning behind each boundary is in `MASTERHANDOFF.md` §4 and §5; this file records what the
-code does at each one, and why it does it that way.
+This file records what the code does at each boundary, and why it does it that way: the artifact each
+stage writes, the one number it owns, and the assumption it does not close.
 
 ## 1. A live handle to two files
 
@@ -32,7 +32,7 @@ input: a chain of `exp2` on positive values reaches infinity after a few nodes, 
 `inf` measures the same instruction but is not a workload.
 
 `demo/graph_stage.cpp` calls `graphlint::write_graph_json`, the only bridge from the process that
-owns the GPU to the world that reads JSON. Two rules, both from §0.4 and §5.1:
+owns the GPU to the world that reads JSON. Two rules:
 
 - the node `id` in the file is a **canonical** id, not the order `cudaGraphGetNodes` returned. The
   map id → handle comes from `from_cuda`'s `handles_by_id`, never rebuilt;
@@ -56,7 +56,7 @@ diffable: when a number moves, the diff names it.
 
 ## 3. The clean graph to the weights table
 
-The ablation is the protocol of §3.8, and it is the one `graph-lint/tools/weights.cu` uses (that file
+The ablation is the same protocol `graph-lint/tools/weights.cu` uses (that file
 is the producer of graph-lint's own table, hardcoded and not exported, so the demo writes its own
 table and copies the policy, not the code):
 
@@ -89,7 +89,7 @@ artifacts/graph.json` must exit 0 and print the weighted path.
 The table owns the per-node numbers. The report block owns what the table cannot carry: the unit, the
 zero point it was subtracted from, the protocol that produced it, how many nodes clamped, and the
 critical path. `path_ns` is recomputed from `graph.json` and `weights.json` after both are on disk —
-the same computation the verifier will redo (§6, check 2) — never taken from the measurement in
+the same computation the verifier will redo (its check 2) — never taken from the measurement in
 memory.
 
 A timing is a property of the machine and the run; the structural numbers are not. Re-running the
@@ -102,8 +102,8 @@ stability.
 The workload's fourteen buffers are `poolkit::Pool` allocations, and every `allocate`/`free` writes
 one JSONL line at the moment the request is made (`demo/trace_sink.hpp`). The trace is the sequence
 of **requests**, not of the driver's allocations: poolkit's CUPTI recorder would have handed back the
-chunks the pool asks `cudaMalloc` for, which are a property of the pool and not of the workload
-(§0.6). That is why the demo writes the file itself.
+chunks the pool asks `cudaMalloc` for, which are a property of the pool and not of the workload.
+That is why the demo writes the file itself.
 
 The format is poolkit's (`docs/trace-format.md` §1): five keys, `ordinal` strictly increasing, `ptr`
 a monotone id that is unique among live blocks, `stream` a logical id — `0` here, because the whole
