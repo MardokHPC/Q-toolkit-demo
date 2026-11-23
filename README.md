@@ -15,24 +15,44 @@ no card.
 
 ```mermaid
 flowchart LR
-  n0["kernel#0"]
-  n1["kernel#1×3"]
-  n4["kernel#4×4"]
-  n8["kernel#8×5"]
+  n0["#0"]
+  n1["#1"]
+  n2["#2"]
+  n3["#3"]
+  n4["#4"]
+  n5["#5"]
+  n6["#6"]
+  n7["#7"]
+  n8["#8"]
+  n9["#9"]
+  n10["#10"]
+  n11["#11"]
+  n12["#12"]
   n0 --> n1
   n0 --> n4
-  n1 --> n8
-  n4 --> n8
-  classDef critical stroke:#c00,stroke-width:2px
-  classDef sync fill:#f90
-  class n0,n4,n8 critical
+  n1 --> n2
+  n2 --> n3
+  n3 --> n8
+  n4 --> n5
+  n5 --> n6
+  n6 --> n7
+  n7 --> n8
+  n8 --> n9
+  n9 --> n10
+  n10 --> n11
+  n11 --> n12
+  classDef crit stroke:#c00,stroke-width:3px
+  classDef par stroke:#3b82f6,stroke-width:2px
+  class n0,n4,n5,n6,n7,n8 crit
+  class n1,n2,n3 par
 ```
 
-Thirteen kernels in five boxes: a stem, two independent branches, a join, a tail. graph-lint collapses
-the linear runs (`×3`, `×4`, `×5`) and paints the critical path red — depth 10, widest level 2, and not
-one edge that a longer path does not already imply. Rendered by `graphlint_report --format mermaid` from
-the committed [`artifacts/graph.json`](artifacts/graph.json); the file is
-[`docs/graph-clean.mmd`](docs/graph-clean.mmd).
+Thirteen kernels: one stem, two branches, one join, one tail. The red branch is the one that decides the
+depth — `1 + 4 + 5 = 10` — while the blue branch finishes early and frees a slot; the tail is serial
+because each step reads the previous output. Drawn from the 13 edges in the committed
+[`artifacts/graph.json`](artifacts/graph.json). `graphlint_report --format mermaid` prints the same
+topology with the linear runs collapsed into single boxes ([`docs/graph-clean.mmd`](docs/graph-clean.mmd)),
+which is the only readable form once a graph has five thousand nodes.
 
 ## The same work, captured the lazy way
 
