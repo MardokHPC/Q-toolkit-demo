@@ -1,4 +1,4 @@
-// qtoolkit_verify: the five checks of MASTERHANDOFF §6, on the committed
+// qtoolkit_verify: the five checks, on the committed
 // artifacts, on a machine with no GPU.
 //
 // Exit 0: every number in report.json was reconstructed. Exit 1: a comparison
@@ -199,7 +199,7 @@ bool pin_value(const std::string& document, std::string_view name, std::string& 
 
 // --- the five checks ------------------------------------------------------
 
-// §6 check 1: both graph artifacts, through the same reader the linter uses.
+// check 1: both graph artifacts, through the same reader the linter uses.
 void check_graphs(const fs::path& artifacts, const JsonValue& report, Suite& suite) {
     const std::pair<const char*, const char*> shapes[] = {
         {"graph.json", "clean"},
@@ -256,7 +256,7 @@ void check_graphs(const fs::path& artifacts, const JsonValue& report, Suite& sui
     }
 }
 
-// §6 check 2: the table is bound to the graph and the weighted path follows.
+// check 2: the table is bound to the graph and the weighted path follows.
 void check_weights(const fs::path& artifacts, const JsonValue& report, Suite& suite) {
     std::string error;
     std::string graph_document;
@@ -337,7 +337,7 @@ void check_weights(const fs::path& artifacts, const JsonValue& report, Suite& su
                   text(static_cast<long long>(path.weight_sum)));
 }
 
-// §6 check 4: the arithmetic the ablation promises, node by node.
+// check 4: the arithmetic the ablation promises, node by node.
 void check_arithmetic(const fs::path& artifacts, const JsonValue& report, Suite& suite) {
     std::string error;
     const JsonValue* weights = qtoolkit::member(report, "weights");
@@ -404,7 +404,7 @@ void check_arithmetic(const fs::path& artifacts, const JsonValue& report, Suite&
                   text(static_cast<long long>(zeros)) + " clamped");
 }
 
-// §6 check 3: the trace replayed on a CPU with the table the advisor recommended.
+// check 3: the trace replayed on a CPU with the table the advisor recommended.
 void check_trace(const fs::path& artifacts, const JsonValue& report, Suite& suite) {
     std::string error;
     const JsonValue* advise = qtoolkit::member(report, "advise");
@@ -515,7 +515,7 @@ void check_trace(const fs::path& artifacts, const JsonValue& report, Suite& suit
                   text(static_cast<long long>(replay.peak_bytes)) + " B");
 }
 
-// §6 check 5: the pins, in one file and in the report.
+// check 5: the pins, in one file and in the report.
 void check_pins(const JsonValue& report, Suite& suite) {
     std::string document;
     std::string error;

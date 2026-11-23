@@ -1,6 +1,6 @@
 # Runs one binary and asserts its exit code. A test that only greps stdout
 # would pass even if the wrapper forgot to return the code, and the exit codes
-# are the contract (§6: 0 reconstructed, 1 mismatch, 2 cannot decide).
+# are the contract: 0 reconstructed, 1 mismatch, 2 cannot decide.
 #
 # Usage:
 #   cmake -DTOOL=<path> -DEXPECTED=<int> [-DARGS=<arg;arg>]

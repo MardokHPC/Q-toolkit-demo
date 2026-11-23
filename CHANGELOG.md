@@ -37,19 +37,19 @@ All notable changes to this project are documented here. The format follows
   missing field is an error, never a zero.
 - The report's `pool_measured` and `advise` blocks, with names that cannot be
   mistaken for one another (`high_water_mark_bytes` against `peak_sim_bytes`).
-- `qtoolkit_verify`, the five checks of §6 on a machine with no GPU: the two
+- `qtoolkit_verify`, the five checks, on a machine with no GPU: the two
   graphs reopened with `parse_graph` + `topology`, the weights table bound by
   fingerprint and its critical path recomputed, the trace replayed on
   `SimBackend` against `report.advise`, the per-node arithmetic, and the pins
   against `cmake/pins.cmake`. Exit 0 reconstructed, 1 a comparison failed with the
   line that names it, 2 cannot decide.
-- A README whose numbers are the ones the verifier rebuilds, and a ctest entry
+- A README whose numbers all come from `artifacts/report.json`, and a ctest entry
   that proves the committed report still checks out.
 - CI job `cuda`: the ON profile configures and builds with nvcc 12.1.1 and no GPU,
   on Linux. The Windows half and the `gpu` job are written in the workflow and
   left commented with what they need.
 - `qtoolkit_verify`: the exit-code contract (0 reconstructed, 1 mismatch, 2
-  cannot decide). The five checks of the contract's §6 land in M5; until then a
+  cannot decide). The five checks land in M5; until then a
   readable report is exit 2, never a silent 0.
 - Host test suite on the report's JSON writer and schema, and ctest entries that
   pin the verifier's exit codes.

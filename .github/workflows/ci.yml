@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
 
-# §6 names three jobs: `host`, `cuda`, `gpu`.
+# Three jobs: `host`, `cuda`, `gpu`.
 #
 # `host` is here: both operating systems, no toolkit, the verifier reconstructing
 # the committed report.
@@ -16,7 +16,7 @@ on:
 #
 # `gpu` is written and commented at the bottom of this file: it needs a
 # self-hosted exclusive runner, a driver, and a check that no test times the
-# pipeline (§3.12).
+# pipeline.
 
 jobs:
   host:
@@ -43,9 +43,9 @@ jobs:
 
       - name: Test
         # poolkit registers its own entries even with its tests off: they are
-        # not ours and CI excludes them by name (§9). The verifier's exit codes
+        # not ours and CI excludes them by name. The verifier's exit codes
         # and its reconstruction of the committed report are three of the
-        # entries below, so this step is also §6's `qtoolkit_verify
+        # entries below, so this step is also the verifier's `qtoolkit_verify
         # artifacts/report.json`.
         run: ctest --test-dir build -C Release --output-on-failure -E "^poolkit_"
 
@@ -81,8 +81,8 @@ jobs:
       - name: Test
         run: ctest --test-dir build --output-on-failure -E "^poolkit_"
 
-# The GPU job, commented on purpose (§6): the pipeline is a command that writes
-# artifacts, not a ctest entry, because no test may assert a timing (§3.12).
+# The GPU job, commented on purpose: the pipeline is a command that writes
+# artifacts, not a ctest entry, because no test may assert a timing.
 #
 #  gpu:
 #    name: gpu (self-hosted, exclusive)

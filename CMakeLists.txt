@@ -14,7 +14,7 @@ project(qtoolkit_demo
 
 include(cmake/pins.cmake)
 
-# Two profiles (§3.7). OFF is what a runner without a toolkit builds: no
+# Two profiles. OFF is what a runner without a toolkit builds: no
 # cuda-timer, no CUDA glue, no nvcc. ON fetches all four and produces the
 # artifacts.
 option(QTOOLKIT_DEMO_WITH_CUDA "Fetch cuda-timer and build the CUDA capture path" OFF)
@@ -67,7 +67,7 @@ function(qtoolkit_cuda_warnings target)
 endfunction()
 
 # Before the dependencies: enabling testing here means their add_test calls
-# land in a tree ctest can walk, and CI excludes them by name (§9).
+# land in a tree ctest can walk, and CI excludes them by name.
 include(CTest)
 
 # ---------------------------------------------------------------------------
@@ -88,7 +88,7 @@ FetchContent_Declare(ulpgrad
 )
 
 set(POOLKIT_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-# The advisor exists only as a binary: tools/ is the only surface (§0.7).
+# The advisor exists only as a binary: tools/ is the only surface.
 set(POOLKIT_BUILD_TOOLS ON CACHE BOOL "" FORCE)
 set(POOLKIT_WITH_CUDA ${QTOOLKIT_DEMO_WITH_CUDA} CACHE BOOL "" FORCE)
 FetchContent_Declare(poolkit
@@ -111,7 +111,7 @@ FetchContent_MakeAvailable(ulpgrad poolkit graph_lint)
 
 if(QTOOLKIT_DEMO_WITH_CUDA)
     # cuda-timer makes the CUDA language mandatory (project(... LANGUAGES CUDA CXX)),
-    # so it exists in the ON profile only: the host profile cannot contain it (§3.7).
+    # so it exists in the ON profile only: the host profile cannot contain it.
     set(CUDA_TIMER_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
     set(CUDA_TIMER_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
     set(CUDA_TIMER_BUILD_TESTS OFF CACHE BOOL "" FORCE)
@@ -125,11 +125,11 @@ endif()
 
 # ---------------------------------------------------------------------------
 # Targets. Two executables and no library: a demo has a producer and a
-# verifier, not an install tree (§3.2).
+# verifier, not an install tree.
 # ---------------------------------------------------------------------------
 
 # C++17 pure and toolkit-free: it is the half of the product a GPU-less runner
-# can still run (§3.7, §6). It links the readers, never a CUDA target.
+# can still run. It links the readers, never a CUDA target.
 add_executable(qtoolkit_verify verify/main.cpp)
 target_include_directories(qtoolkit_verify PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/demo)
 target_link_libraries(qtoolkit_verify PRIVATE
@@ -159,8 +159,8 @@ if(QTOOLKIT_DEMO_WITH_CUDA)
         poolkit::poolkit
         CUDA::cudart
     )
-    # The pins reach the report from the one file that owns them (§3.3); the
-    # advisor is a binary and its path is the only API it has (§0.7).
+    # The pins reach the report from the one file that owns them; the
+    # advisor is a binary and its path is the only API it has.
     target_compile_definitions(qtoolkit_workload PRIVATE
         QTOOLKIT_VERSION="${QTOOLKIT_VERSION}"
         QTOOLKIT_PIN_CUDA_TIMER="${QTOOLKIT_PIN_CUDA_TIMER}"
@@ -175,7 +175,7 @@ endif()
 
 # ---------------------------------------------------------------------------
 # Tests: one GoogleTest in the build (v1.15.2, as the suite), host only.
-# Nothing here asserts a duration (§3.12).
+# Nothing here asserts a duration.
 # ---------------------------------------------------------------------------
 if(BUILD_TESTING)
     FetchContent_Declare(googletest
@@ -219,7 +219,7 @@ if(BUILD_TESTING)
         -DEXPECT_STDERR=cannot.open
         -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/run_expect.cmake)
 
-    # §6: the committed artifacts must reconstruct. This is the job the free CI
+    # The committed artifacts must reconstruct. This is the job the free CI
     # runner does without a GPU.
     add_test(NAME qtoolkit_report_verified COMMAND ${CMAKE_COMMAND}
         -DTOOL=$<TARGET_FILE:qtoolkit_verify>
@@ -243,7 +243,7 @@ if(BUILD_TESTING)
     set_tests_properties(qtoolkit_report_tampered_refused PROPERTIES
         DEPENDS qtoolkit_report_tampered)
 
-    # The table the demo writes must be the table graph-lint accepts (§3.9), and
+    # The table the demo writes must be the table graph-lint accepts, and
     # this runs on a runner with no GPU: it reads two committed files.
     add_test(NAME qtoolkit_weights_accepted COMMAND ${CMAKE_COMMAND}
         -DTOOL=$<TARGET_FILE:graphlint_report>

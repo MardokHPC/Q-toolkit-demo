@@ -30,7 +30,7 @@ if errorlevel 1 exit /b 1
 cmake --build "%BUILD%"
 if errorlevel 1 exit /b 1
 
-rem M1 run: one command, one artifact. Not a ctest entry (§3.12).
+rem M1 run: one command, one artifact. Not a ctest entry.
 rem The run starts from the repo root and passes relative paths: an absolute
 rem path would make a committed artifact depend on the machine that produced it.
 pushd "%~dp0"

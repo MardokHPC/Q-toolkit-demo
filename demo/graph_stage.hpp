@@ -15,7 +15,7 @@
 namespace qtoolkit {
 
 // `handles_by_id` receives the canonical id -> handle map from from_cuda: it is
-// the only correct way to name a node for the ablation (§0.4).
+// the only correct way to name a node for the ablation.
 [[nodiscard]] bool write_graph(const cudaGraph_t& graph, const std::string& path,
                                std::string& error,
                                std::vector<cudaGraphNode_t>* handles_by_id = nullptr);
@@ -31,7 +31,7 @@ struct WeightedPath {
                                  const std::vector<std::uint64_t>& ns, std::string& error);
 
 // Re-reads both files: the weighted path is recomputed from the committed
-// artifacts, exactly as the verifier will (§6, check 2).
+// artifacts, exactly as the verifier will (check 2).
 [[nodiscard]] bool weighted_path(const std::string& graph_path, const std::string& weights_path,
                                  WeightedPath& out, std::string& error);
 

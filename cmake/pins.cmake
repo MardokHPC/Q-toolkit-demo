@@ -1,4 +1,4 @@
-# The four pins, in one place and nowhere else (§3.3). report.json copies these
+# The four pins, in one place and nowhere else. report.json copies these
 # values and qtoolkit_verify refuses a report whose pins disagree with this file.
 # A branch would make the verdict depend on somebody else's push.
 

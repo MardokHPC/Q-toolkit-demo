@@ -22,6 +22,6 @@ if errorlevel 1 exit /b 1
 cmake --build "%BUILD%"
 if errorlevel 1 exit /b 1
 
-rem poolkit registers its own entries even with its tests off: excluded by name (§9).
+rem poolkit registers its own entries even with its tests off: excluded by name.
 ctest --test-dir "%BUILD%" --output-on-failure -E "^poolkit_"
 exit /b %errorlevel%

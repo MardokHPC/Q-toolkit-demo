@@ -3,7 +3,7 @@
 // One JSONL line per request, written where the request is made. poolkit's trace
 // is the sequence of what the workload asked the pool for; the CUPTI recorder
 // would hand back the driver's chunks instead, which is why the demo writes its
-// own (§0.6).
+// own.
 
 #include <poolkit/pool.hpp>
 

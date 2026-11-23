@@ -7,7 +7,7 @@
 // Every block is derived from artifacts and never from the run: the graph block
 // from graph.json, the weights block from graph.json + weights.json, the pool
 // block from the pool's own counters, the advise block from what poolkit_advise
-// wrote. The verifier will redo those derivations (§6); nothing here is typed by
+// wrote. The verifier will redo those derivations; nothing here is typed by
 // hand and nothing is quoted from a terminal.
 
 #include "json.hpp"
@@ -49,7 +49,7 @@ struct Environment {
 // The weights table owns the per-node numbers; this block owns what the table
 // cannot say: the floor it was subtracted from, the protocol, and how many nodes
 // fell under the timer's resolution. path_ns is a conclusion the verifier
-// recomputes from graph.json and weights.json (§6, check 2).
+// recomputes from graph.json and weights.json (check 2).
 struct WeightBlock {
     std::int64_t zero_point_ns = 0;
     int warmup_runs = 0;
@@ -70,7 +70,7 @@ struct PoolConfigRecord {
 
 // What the pool did on this run, with its own configuration beside it: a
 // high-water mark without the table that produced it is a number without units.
-// The name is deliberately not the advisor's `peak_sim_bytes` (§5.4).
+// The name is deliberately not the advisor's `peak_sim_bytes`.
 struct PoolBlock {
     PoolConfigRecord config;
     std::size_t requests = 0;

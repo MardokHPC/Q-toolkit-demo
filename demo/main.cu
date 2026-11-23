@@ -1,7 +1,7 @@
 // The command. M4: the workload's buffers are pool allocations, every request
 // becomes a line of trace.jsonl, poolkit_advise turns that trace into a
 // recommendation, and the report carries both sides with names that cannot be
-// mistaken for one another (§5.4).
+// mistaken for one another.
 
 #include "ablation.hpp"
 #include "advise_stage.hpp"
@@ -46,7 +46,7 @@ int widest(const std::vector<int>& width) {
     return width.empty() ? 0 : *std::max_element(width.begin(), width.end());
 }
 
-// §5.3: more than 30 % clamped means the graph is smaller than this card's
+// More than 30 % clamped means the graph is smaller than this card's
 // measurement floor, and the table would be a number about the timer.
 bool too_small_for_the_card(const qtoolkit::Ablation& ablation) {
     return ablation.clamped * 10 > ablation.weight_ns.size() * 3;

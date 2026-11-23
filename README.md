@@ -10,8 +10,8 @@ a `cudaGraph_t`; [graph-lint](https://github.com/MardokHPC/graph-lint) reads the
 [cuda-timer](https://github.com/MardokHPC/cuda-timer) times one node at a time,
 [poolkit](https://github.com/MardokHPC/poolkit) turns the workload's requests into a trace and sizes a
 pool, [ulpgrad](https://github.com/MardokHPC/ulpgrad) is the math inside the kernels. Every number lands
-in `artifacts/report.json`, and `qtoolkit_verify` rebuilds it from the committed files on a machine with
-no card.
+in `artifacts/report.json`; `qtoolkit_verify` rebuilds the structural ones from the committed files on a
+machine with no card, and checks the arithmetic behind the measured ones.
 
 ```mermaid
 flowchart LR
@@ -47,12 +47,13 @@ flowchart LR
   class n1,n2,n3 par
 ```
 
-Thirteen kernels: one stem, two branches, one join, one tail. The red branch is the one that decides the
-depth — `1 + 4 + 5 = 10` — while the blue branch finishes early and frees a slot; the tail is serial
-because each step reads the previous output. Drawn from the 13 edges in the committed
-[`artifacts/graph.json`](artifacts/graph.json). `graphlint_report --format mermaid` prints the same
-topology with the linear runs collapsed into single boxes ([`docs/graph-clean.mmd`](docs/graph-clean.mmd)),
-which is the only readable form once a graph has five thousand nodes.
+Thirteen kernels: one stem, two branches, one join, one tail. The red branch decides the depth —
+`1 + 4 + 5 = 10` — while the blue branch finishes early and frees a slot. The five-node tail is on the
+critical path too, but it is serial by construction: there is nothing to choose there, which is why it
+is not red. Drawn from the 13 edges in the committed [`artifacts/graph.json`](artifacts/graph.json).
+`graphlint_report --format mermaid` prints the same topology with the linear runs collapsed into single
+boxes ([`docs/graph-clean.mmd`](docs/graph-clean.mmd)), which is the only readable form once a graph has
+five thousand nodes.
 
 ## The same work, captured the lazy way
 

@@ -6,7 +6,7 @@
 
 namespace qtoolkit {
 
-// poolkit_advise has no API: the binary is the only surface (§0.7). It writes
+// poolkit_advise has no API: the binary is the only surface. It writes
 // its --json, and this reads back the fields the report carries, refusing a
 // document that does not match the schema it claims. The reference configuration
 // is the one the workload actually ran with: a recommendation computed against

@@ -2,7 +2,7 @@
 
 // JSON, ours: a writer with fixed separators and one value per line, and a
 // strict reader. A third-party library would be a dependency for what this file
-// does, and the artifacts' bytes are a contract (§3.6): a committed report must
+// does, and the artifacts' bytes are a contract: a committed report must
 // not change because a library updated its float formatting.
 //
 // Numbers never touch a locale: std::to_chars and std::from_chars only.
