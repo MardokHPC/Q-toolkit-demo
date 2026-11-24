@@ -166,7 +166,7 @@ int main(int argc, char** argv) {
 
     if (too_small_for_the_card(ablation)) {
         return fail("more than 30 % of the nodes clamped to zero: the graph is too small for " +
-                    report.environment.device + ", grow the workload (MASTERHANDOFF 5.3)");
+                    report.environment.device + ", grow the workload");
     }
 
     if (!qtoolkit::write_weights(clean_path, weights_path, ablation.weight_ns, error)) {

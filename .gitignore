@@ -3,7 +3,7 @@ build*/
 .vs/
 CMakeUserPresets.json
 
-# Personal protocol files (QMan): they live on disk, they never ship.
+# Personal protocol files: they live on disk, they never ship.
 AGENTS.md
 HANDOFF.md
 MASTERHANDOFF.md

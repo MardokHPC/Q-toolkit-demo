@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 
-# One owner for the version: the file QMan's checker reads. A second literal in
+# One owner for the version: the VERSION file. A second literal in
 # project(VERSION ...) is the drift this project exists to avoid.
 file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" QTOOLKIT_VERSION LIMIT_COUNT 1)
 string(STRIP "${QTOOLKIT_VERSION}" QTOOLKIT_VERSION)
