@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
 
-# Three jobs: `host`, `cuda`, `gpu`.
+# Four jobs: `host`, `cuda`, `package`, `gpu`.
 #
 # `host` is here: both operating systems, no toolkit, the verifier reconstructing
 # the committed report.
@@ -13,6 +13,10 @@ on:
 # the documented install and needs no third-party action; the Windows half of
 # this job would, and the reference machine is Windows (`build-device.bat`), so
 # it waits for a pinned installer action rather than guessing one.
+#
+# `package` builds the host half on both systems and uploads the archive that
+# becomes the release asset: the verifier links no CUDA target, so a reader who
+# only wants to check a report should not have to install CMake.
 #
 # `gpu` is written and commented at the bottom of this file: it needs a
 # self-hosted exclusive runner, a driver, and a check that no test times the
@@ -80,6 +84,47 @@ jobs:
 
       - name: Test
         run: ctest --test-dir build --output-on-failure -E "^poolkit_"
+
+  package:
+    name: package (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            platform: linux-x64
+            binary: build/qtoolkit_verify
+            python: python3
+            # The archive must run on a machine that never built it: libstdc++
+            # and libgcc travel inside, glibc is the runner's 2.35.
+            linker: -DCMAKE_EXE_LINKER_FLAGS=-static-libstdc++ -static-libgcc
+          - os: windows-2022
+            platform: windows-x64
+            binary: build/Release/qtoolkit_verify.exe
+            python: python
+            linker: -DCMAKE_EXE_LINKER_FLAGS=
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure (no toolkit)
+        run: >
+          cmake -S . -B build
+          -DCMAKE_BUILD_TYPE=Release
+          -DQTOOLKIT_DEMO_WITH_CUDA=OFF
+          ${{ matrix.linker }}
+
+      - name: Build the verifier
+        run: cmake --build build --config Release --target qtoolkit_verify
+
+      - name: Package
+        run: ${{ matrix.python }} tools/package_verify.py --binary ${{ matrix.binary }} --out dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qtoolkit_verify-${{ matrix.platform }}
+          path: dist/*
+          if-no-files-found: error
 
 # The GPU job, commented on purpose: the pipeline is a command that writes
 # artifacts, not a ctest entry, because no test may assert a timing.

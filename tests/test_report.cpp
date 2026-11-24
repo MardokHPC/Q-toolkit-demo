@@ -135,6 +135,22 @@ TEST(Report, TheSchemaIsByteStable) {
     report.weights.median_ns = {4000, 20000};
     report.weights.path = {0, 1};
     report.weights.path_ns = 20000;
+    report.weights.sum_ns = 60000;
+
+    report.shape_cost.launch_warmup_runs = 10;
+    report.shape_cost.launch_measure_runs = 100;
+    report.shape_cost.instantiate_warmup_runs = 5;
+    report.shape_cost.instantiate_measure_runs = 50;
+    report.shape_cost.launch_clean_ns = 100000;
+    report.shape_cost.launch_clean_min_ns = 98000;
+    report.shape_cost.launch_clean_max_ns = 104000;
+    report.shape_cost.launch_pingpong_ns = 180000;
+    report.shape_cost.launch_pingpong_min_ns = 178000;
+    report.shape_cost.launch_pingpong_max_ns = 183000;
+    report.shape_cost.launch_delta_ns = 80000;
+    report.shape_cost.instantiate_clean_ns = 20000;
+    report.shape_cost.instantiate_pingpong_ns = 35000;
+    report.shape_cost.instantiate_delta_ns = 15000;
 
     report.pool.config.chunk_bytes = 8388608;
     report.pool.config.min_class_bytes = 256;
@@ -166,7 +182,7 @@ TEST(Report, TheSchemaIsByteStable) {
     report.advise.retention_bound_bytes = 36864;
 
     const std::string expected = R"({
-  "schema_version": 1,
+  "schema_version": 2,
   "tool": "qtoolkit-demo",
   "version": "0.1.0",
   "pins": {
@@ -233,7 +249,31 @@ TEST(Report, TheSchemaIsByteStable) {
       0,
       1
     ],
-    "path_ns": 20000
+    "path_ns": 20000,
+    "sum_ns": 60000
+  },
+  "shape_cost": {
+    "unit": "ns",
+    "launch": {
+      "clock": "cuda-events",
+      "warmup_runs": 10,
+      "measure_runs": 100,
+      "clean_median_ns": 100000,
+      "clean_min_ns": 98000,
+      "clean_max_ns": 104000,
+      "pingpong_median_ns": 180000,
+      "pingpong_min_ns": 178000,
+      "pingpong_max_ns": 183000,
+      "delta_median_ns": 80000
+    },
+    "instantiate": {
+      "clock": "steady_clock",
+      "warmup_runs": 5,
+      "measure_runs": 50,
+      "clean_median_ns": 20000,
+      "pingpong_median_ns": 35000,
+      "delta_median_ns": 15000
+    }
   },
   "pool_measured": {
     "config": {

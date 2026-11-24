@@ -1,4 +1,4 @@
-// qtoolkit_verify: the five checks, on the committed
+// qtoolkit_verify: the six checks, on the committed
 // artifacts, on a machine with no GPU.
 //
 // Exit 0: every number in report.json was reconstructed. Exit 1: a comparison
@@ -22,6 +22,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <exception>
 #include <filesystem>
 #include <fstream>
@@ -195,6 +196,57 @@ bool pin_value(const std::string& document, std::string_view name, std::string& 
     }
     out = document.substr(value_start, end - value_start);
     return true;
+}
+
+// The pins file: the one the build compiled in, or the copy the release archive
+// ships beside the binary. An archive has no build tree, and a check 5 that
+// cannot look answers "undecidable" on every archived run — a verifier that only
+// works inside the checkout it was built from is not the tool the archive
+// promises.
+std::string environment_variable(const char* name) {
+#ifdef _MSC_VER
+    // getenv is deprecated under MSVC's /W4 /WX; _dupenv_s is the checked form.
+    char* buffer = nullptr;
+    std::size_t length = 0;
+    if (_dupenv_s(&buffer, &length, name) != 0 || buffer == nullptr) {
+        return {};
+    }
+    const std::string value(buffer);
+    std::free(buffer);
+    return value;
+#else
+    const char* value = std::getenv(name);
+    return value == nullptr ? std::string() : std::string(value);
+#endif
+}
+
+std::vector<fs::path> pins_candidates(const fs::path& artifacts, const fs::path& exe_dir) {
+    std::vector<fs::path> candidates;
+    const std::string from_environment = environment_variable("QTOOLKIT_PINS_FILE");
+    if (!from_environment.empty()) {
+        candidates.emplace_back(from_environment);
+    }
+    if (!exe_dir.empty()) {
+        candidates.push_back(exe_dir / "pins.cmake");
+    }
+    candidates.emplace_back(QTOOLKIT_PINS_FILE);
+    if (!artifacts.parent_path().empty()) {
+        candidates.push_back(artifacts.parent_path() / "cmake" / "pins.cmake");
+    }
+    candidates.emplace_back("cmake/pins.cmake");
+    return candidates;
+}
+
+fs::path executable_directory(const char* argv0) {
+    std::error_code ignored;
+    const fs::path path = argv0 == nullptr ? fs::path() : fs::path(argv0);
+    if (path.has_parent_path()) {
+        const fs::path absolute = fs::absolute(path, ignored);
+        if (!ignored) {
+            return absolute.parent_path();
+        }
+    }
+    return fs::current_path(ignored);
 }
 
 // --- the five checks ------------------------------------------------------
@@ -399,9 +451,28 @@ void check_arithmetic(const fs::path& artifacts, const JsonValue& report, Suite&
                       ", the table has " + text(static_cast<long long>(zeros)) + " zeros");
         return;
     }
+
+    // The sum is the other half of the same table: path_ns says how long the
+    // critical path is, sum_ns says how much work there is to overlap.
+    std::uint64_t total = 0;
+    for (const std::uint64_t weight : table.ns) {
+        total += weight;
+    }
+    std::uint64_t reported_sum = 0;
+    if (!qtoolkit::json_unsigned(*weights, "sum_ns", "report.weights", reported_sum, error)) {
+        suite.add(kMismatch, "weights arithmetic", error);
+        return;
+    }
+    if (reported_sum != total) {
+        suite.add(kMismatch, "weights arithmetic",
+                  "sum_ns: report " + text(static_cast<long long>(reported_sum)) +
+                      ", the table adds up to " + text(static_cast<long long>(total)));
+        return;
+    }
     suite.add(kOk, "weights arithmetic",
               text(static_cast<long long>(table.ns.size())) + " nodes, " +
-                  text(static_cast<long long>(zeros)) + " clamped");
+                  text(static_cast<long long>(zeros)) + " clamped, sum " +
+                  text(static_cast<long long>(total)) + " ns");
 }
 
 // check 3: the trace replayed on a CPU with the table the advisor recommended.
@@ -515,12 +586,178 @@ void check_trace(const fs::path& artifacts, const JsonValue& report, Suite& suit
                   text(static_cast<long long>(replay.peak_bytes)) + " B");
 }
 
+// check 6: the shape's price. The two numbers are measurements of one card and
+// no file reproduces them; what a reader without the card can hold is that both
+// exist, that they were taken with a declared protocol, and that each delta is
+// the subtraction of the pair beside it. A sign is not checked: a pingpong that
+// came out cheaper is a measurement, not a schema error.
+void check_shape_cost(const JsonValue& report, Suite& suite) {
+    std::string error;
+    const JsonValue* block = qtoolkit::member(report, "shape_cost");
+    if (block == nullptr) {
+        suite.add(kMismatch, "shape cost", "report: missing block 'shape_cost'");
+        return;
+    }
+    const JsonValue* launch = nullptr;
+    const JsonValue* instantiate = nullptr;
+    if (!qtoolkit::json_object(*block, "launch", "report.shape_cost", launch, error) ||
+        !qtoolkit::json_object(*block, "instantiate", "report.shape_cost", instantiate, error)) {
+        suite.add(kMismatch, "shape cost", error);
+        return;
+    }
+
+    std::string unit;
+    if (!qtoolkit::json_string(*block, "unit", "report.shape_cost", unit, error)) {
+        suite.add(kMismatch, "shape cost", error);
+        return;
+    }
+    if (unit != "ns") {
+        suite.add(kMismatch, "shape cost", "unit is \"" + unit + "\", the schema says \"ns\"");
+        return;
+    }
+
+    // The launch is the ablation's clock on the ablation's protocol: two blocks
+    // in one document that time the same kind of thing with different run
+    // counts would make the medians incomparable without saying so.
+    const JsonValue* weights = qtoolkit::member(report, "weights");
+    std::uint64_t ablation_warmup = 0;
+    std::uint64_t ablation_measure = 0;
+    if (weights == nullptr ||
+        !qtoolkit::json_unsigned(*weights, "warmup_runs", "report.weights", ablation_warmup,
+                                 error) ||
+        !qtoolkit::json_unsigned(*weights, "measure_runs", "report.weights", ablation_measure,
+                                 error)) {
+        suite.add(kMismatch, "shape cost", "report.weights: " + error);
+        return;
+    }
+    std::uint64_t launch_warmup = 0;
+    std::uint64_t launch_measure = 0;
+    if (!qtoolkit::json_unsigned(*launch, "warmup_runs", "report.shape_cost.launch", launch_warmup,
+                                 error) ||
+        !qtoolkit::json_unsigned(*launch, "measure_runs", "report.shape_cost.launch",
+                                 launch_measure, error)) {
+        suite.add(kMismatch, "shape cost", error);
+        return;
+    }
+    if (launch_warmup != ablation_warmup || launch_measure != ablation_measure) {
+        suite.add(kMismatch, "shape cost",
+                  "launch protocol " + text(static_cast<long long>(launch_warmup)) + "+" +
+                      text(static_cast<long long>(launch_measure)) +
+                      " runs, the ablation measured " +
+                      text(static_cast<long long>(ablation_warmup)) + "+" +
+                      text(static_cast<long long>(ablation_measure)));
+        return;
+    }
+
+    std::string launch_clock;
+    std::string instantiate_clock;
+    if (!qtoolkit::json_string(*launch, "clock", "report.shape_cost.launch", launch_clock,
+                               error) ||
+        !qtoolkit::json_string(*instantiate, "clock", "report.shape_cost.instantiate",
+                               instantiate_clock, error)) {
+        suite.add(kMismatch, "shape cost", error);
+        return;
+    }
+    if (launch_clock != "cuda-events" || instantiate_clock != "steady_clock") {
+        suite.add(kMismatch, "shape cost",
+                  "clocks: launch \"" + launch_clock + "\", instantiate \"" + instantiate_clock +
+                      "\"; a host call timed with events measures the empty stream");
+        return;
+    }
+
+    std::int64_t launch_delta = 0;
+    std::int64_t launch_clean = 0;
+    std::int64_t launch_pingpong = 0;
+    std::int64_t instantiate_delta = 0;
+    const std::pair<const char*, const JsonValue*> pairs[] = {
+        {"launch", launch},
+        {"instantiate", instantiate},
+    };
+    for (const auto& pair : pairs) {
+        const std::string context = std::string("report.shape_cost.") + pair.first;
+        std::int64_t clean = 0;
+        std::int64_t pingpong = 0;
+        std::int64_t delta = 0;
+        if (!qtoolkit::json_signed(*pair.second, "clean_median_ns", context, clean, error) ||
+            !qtoolkit::json_signed(*pair.second, "pingpong_median_ns", context, pingpong, error) ||
+            !qtoolkit::json_signed(*pair.second, "delta_median_ns", context, delta, error)) {
+            suite.add(kMismatch, "shape cost", error);
+            return;
+        }
+        if (clean <= 0 || pingpong <= 0) {
+            suite.add(kMismatch, "shape cost",
+                      context + ": clean " + text(clean) + " ns, pingpong " + text(pingpong) +
+                          " ns — a zero here is a broken measurement, not a fast shape");
+            return;
+        }
+        if (pingpong - clean != delta) {
+            suite.add(kMismatch, "shape cost",
+                      context + ".delta_median_ns: report " + text(delta) +
+                          ", pingpong - clean is " + text(pingpong - clean));
+            return;
+        }
+        if (std::string(pair.first) == "launch") {
+            launch_delta = delta;
+            launch_clean = clean;
+            launch_pingpong = pingpong;
+        } else {
+            instantiate_delta = delta;
+        }
+    }
+
+    // The spread is part of the number: a median outside its own [min, max] is a
+    // transcription error, and a reader who cannot see the spread cannot tell a
+    // two-microsecond delta from noise.
+    std::int64_t clean_min = 0;
+    std::int64_t clean_max = 0;
+    std::int64_t pingpong_min = 0;
+    std::int64_t pingpong_max = 0;
+    if (!qtoolkit::json_signed(*launch, "clean_min_ns", "report.shape_cost.launch", clean_min,
+                               error) ||
+        !qtoolkit::json_signed(*launch, "clean_max_ns", "report.shape_cost.launch", clean_max,
+                               error) ||
+        !qtoolkit::json_signed(*launch, "pingpong_min_ns", "report.shape_cost.launch",
+                               pingpong_min, error) ||
+        !qtoolkit::json_signed(*launch, "pingpong_max_ns", "report.shape_cost.launch",
+                               pingpong_max, error)) {
+        suite.add(kMismatch, "shape cost", error);
+        return;
+    }
+    if (clean_min > launch_clean || launch_clean > clean_max || pingpong_min > launch_pingpong ||
+        launch_pingpong > pingpong_max) {
+        suite.add(kMismatch, "shape cost",
+                  "the launch median is outside its own range: clean " + text(launch_clean) +
+                      " ns in [" + text(clean_min) + ", " + text(clean_max) + "], pingpong " +
+                      text(launch_pingpong) + " ns in [" + text(pingpong_min) + ", " +
+                      text(pingpong_max) + "]");
+        return;
+    }
+
+    suite.add(kOk, "shape cost",
+              "pingpong +" + text(launch_delta) + " ns per launch (clean " +
+                  text(launch_clean) + " ns in [" + text(clean_min) + ", " + text(clean_max) +
+                  "]), +" + text(instantiate_delta) + " ns to instantiate");
+}
+
 // check 5: the pins, in one file and in the report.
-void check_pins(const JsonValue& report, Suite& suite) {
+void check_pins(const fs::path& artifacts, const fs::path& exe_dir, const JsonValue& report,
+                Suite& suite) {
     std::string document;
     std::string error;
-    if (!read_file(fs::path(QTOOLKIT_PINS_FILE), document, error)) {
-        suite.add(kUndecidable, "pins", error);
+    fs::path chosen;
+    for (const fs::path& candidate : pins_candidates(artifacts, exe_dir)) {
+        std::error_code ignored;
+        if (!fs::is_regular_file(candidate, ignored)) {
+            continue;
+        }
+        if (read_file(candidate, document, error)) {
+            chosen = candidate;
+            break;
+        }
+    }
+    if (chosen.empty()) {
+        suite.add(kUndecidable, "pins",
+                  "no pins file: set QTOOLKIT_PINS_FILE or run beside cmake/pins.cmake");
         return;
     }
 
@@ -555,7 +792,7 @@ void check_pins(const JsonValue& report, Suite& suite) {
             return;
         }
     }
-    suite.add(kOk, "pins", "4 pins match cmake/pins.cmake");
+    suite.add(kOk, "pins", "4 pins match " + chosen.generic_string());
 }
 
 }  // namespace
@@ -591,8 +828,8 @@ int main(int argc, char** argv) {
         std::fprintf(stderr, "qtoolkit_verify: %s\n", error.c_str());
         return 2;
     }
-    if (schema != 1) {
-        std::fprintf(stderr, "qtoolkit_verify: schema %s, this verifier reads 1\n",
+    if (schema != 2) {
+        std::fprintf(stderr, "qtoolkit_verify: schema %s, this verifier reads 2\n",
                      text(static_cast<long long>(schema)).c_str());
         return 2;
     }
@@ -604,10 +841,11 @@ int main(int argc, char** argv) {
         argc == 3 ? fs::path(argv[2])
                   : (report_path.has_parent_path() ? report_path.parent_path() : fs::path("."));
     Suite suite;
-    check_pins(report, suite);
+    check_pins(artifacts, executable_directory(argc > 0 ? argv[0] : nullptr), report, suite);
     check_graphs(artifacts, report, suite);
     check_weights(artifacts, report, suite);
     check_arithmetic(artifacts, report, suite);
+    check_shape_cost(report, suite);
     check_trace(artifacts, report, suite);
 
     suite.print();

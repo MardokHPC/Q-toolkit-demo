@@ -8,6 +8,7 @@
 #include "file_io.hpp"
 #include "graph_stage.hpp"
 #include "report.hpp"
+#include "shape_cost.hpp"
 #include "trace_sink.hpp"
 #include "workload.hpp"
 
@@ -121,8 +122,19 @@ int main(int argc, char** argv) {
         return fail(error);
     }
     const bool pingpong_written = qtoolkit::write_graph(pingpong, pingpong_path, error);
-    (void)cudaGraphDestroy(pingpong);
     if (!pingpong_written) {
+        (void)cudaGraphDestroy(pingpong);
+        return fail(error);
+    }
+
+    // The linter says the pingpong has eleven edges a longer path already
+    // implies and three levels more. This is what that costs, measured on the
+    // two graphs while both are still alive: instantiate them and launch them,
+    // no node enabled or disabled.
+    qtoolkit::ShapeCost cost;
+    const bool priced = qtoolkit::measure_shapes(clean, pingpong, stream, cost, error);
+    (void)cudaGraphDestroy(pingpong);
+    if (!priced) {
         return fail(error);
     }
 
@@ -204,6 +216,26 @@ int main(int argc, char** argv) {
     report.weights.median_ns = ablation.median_ns;
     report.weights.path = path.nodes;
     report.weights.path_ns = path.ns;
+    std::uint64_t sum_ns = 0;
+    for (const std::uint64_t weight : ablation.weight_ns) {
+        sum_ns += weight;
+    }
+    report.weights.sum_ns = sum_ns;
+
+    report.shape_cost.launch_warmup_runs = qtoolkit::kShapeWarmupRuns;
+    report.shape_cost.launch_measure_runs = qtoolkit::kShapeMeasureRuns;
+    report.shape_cost.instantiate_warmup_runs = qtoolkit::kInstantiateWarmupRuns;
+    report.shape_cost.instantiate_measure_runs = qtoolkit::kInstantiateMeasureRuns;
+    report.shape_cost.launch_clean_ns = cost.launch_clean_ns;
+    report.shape_cost.launch_clean_min_ns = cost.launch_clean_min_ns;
+    report.shape_cost.launch_clean_max_ns = cost.launch_clean_max_ns;
+    report.shape_cost.launch_pingpong_ns = cost.launch_pingpong_ns;
+    report.shape_cost.launch_pingpong_min_ns = cost.launch_pingpong_min_ns;
+    report.shape_cost.launch_pingpong_max_ns = cost.launch_pingpong_max_ns;
+    report.shape_cost.launch_delta_ns = cost.launch_delta_ns;
+    report.shape_cost.instantiate_clean_ns = cost.instantiate_clean_ns;
+    report.shape_cost.instantiate_pingpong_ns = cost.instantiate_pingpong_ns;
+    report.shape_cost.instantiate_delta_ns = cost.instantiate_delta_ns;
 
     report.pool.config = reference;
     report.pool.requests = sink.allocations();
@@ -229,6 +261,16 @@ int main(int argc, char** argv) {
                 report.pingpong.redundant_edges, report.pingpong.edges);
     std::printf("weights.json:        path_ns %llu over %zu nodes\n",
                 static_cast<unsigned long long>(report.weights.path_ns), path.nodes.size());
+    std::printf("shape cost:          launch %lld ns clean [%lld..%lld] vs %lld ns pingpong "
+                "[%lld..%lld] (%+lld ns), instantiate %+lld ns\n",
+                static_cast<long long>(report.shape_cost.launch_clean_ns),
+                static_cast<long long>(report.shape_cost.launch_clean_min_ns),
+                static_cast<long long>(report.shape_cost.launch_clean_max_ns),
+                static_cast<long long>(report.shape_cost.launch_pingpong_ns),
+                static_cast<long long>(report.shape_cost.launch_pingpong_min_ns),
+                static_cast<long long>(report.shape_cost.launch_pingpong_max_ns),
+                static_cast<long long>(report.shape_cost.launch_delta_ns),
+                static_cast<long long>(report.shape_cost.instantiate_delta_ns));
     std::printf("trace.jsonl:         %zu requests, %zu chunks, high water mark %llu B\n",
                 report.pool.requests, report.pool.chunks,
                 static_cast<unsigned long long>(report.pool.high_water_mark_bytes));

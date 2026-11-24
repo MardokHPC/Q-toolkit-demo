@@ -76,6 +76,27 @@ inline constexpr std::uint64_t kMaxExactInteger = 9007199254740992ull;
     return true;
 }
 
+[[nodiscard]] inline bool json_signed(const JsonValue& parent, std::string_view name,
+                                      const std::string& context, std::int64_t& out,
+                                      std::string& error) {
+    const JsonValue* value = member(parent, name);
+    if (value == nullptr) {
+        error = context + ": missing member '" + std::string(name) + "'";
+        return false;
+    }
+    if (value->kind != JsonValue::Kind::number || !value->integral) {
+        error = context + ": '" + std::string(name) + "' is not an integer";
+        return false;
+    }
+    if (value->number < -static_cast<double>(kMaxExactInteger) ||
+        value->number > static_cast<double>(kMaxExactInteger)) {
+        error = context + ": '" + std::string(name) + "' is outside the exact-integer range";
+        return false;
+    }
+    out = static_cast<std::int64_t>(value->number);
+    return true;
+}
+
 [[nodiscard]] inline bool json_number(const JsonValue& parent, std::string_view name,
                                       const std::string& context, double& out,
                                       std::string& error) {

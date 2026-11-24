@@ -19,7 +19,9 @@
 
 namespace qtoolkit {
 
-inline constexpr int kReportSchemaVersion = 1;
+// 2 added the `shape_cost` block: a verifier that reads 1 cannot check it, so
+// the number that tells 1 from 2 is not cosmetic.
+inline constexpr int kReportSchemaVersion = 2;
 
 struct FindingRecord {
     std::string rule;
@@ -58,6 +60,31 @@ struct WeightBlock {
     std::vector<std::int64_t> median_ns;  // by canonical id, zero point included
     std::vector<int> path;
     std::uint64_t path_ns = 0;
+    // The sum of every node's weight: the work the graph does if nothing
+    // overlaps. Beside path_ns it is what says whether the shape's parallelism
+    // pays, and it is the number the pingpong's longer path is compared with.
+    std::uint64_t sum_ns = 0;
+};
+
+// What the shape costs, in the two places a caller pays: instantiating the exec
+// and launching it. The deltas are stored, not derived by a reader: the
+// verifier checks that each one is the subtraction of the two numbers beside it.
+// A negative delta is a legitimate answer and the report must carry it.
+struct ShapeCostBlock {
+    int launch_warmup_runs = 0;
+    int launch_measure_runs = 0;
+    int instantiate_warmup_runs = 0;
+    int instantiate_measure_runs = 0;
+    std::int64_t launch_clean_ns = 0;
+    std::int64_t launch_clean_min_ns = 0;
+    std::int64_t launch_clean_max_ns = 0;
+    std::int64_t launch_pingpong_ns = 0;
+    std::int64_t launch_pingpong_min_ns = 0;
+    std::int64_t launch_pingpong_max_ns = 0;
+    std::int64_t launch_delta_ns = 0;
+    std::int64_t instantiate_clean_ns = 0;
+    std::int64_t instantiate_pingpong_ns = 0;
+    std::int64_t instantiate_delta_ns = 0;
 };
 
 struct PoolConfigRecord {
@@ -119,6 +146,7 @@ struct Report {
     GraphBlock clean;
     GraphBlock pingpong;
     WeightBlock weights;
+    ShapeCostBlock shape_cost;
     PoolBlock pool;
     AdviseBlock advise;
 };
@@ -233,6 +261,56 @@ struct Report {
     json.end_array();
     json.field("path_ns");
     json.integer(unsigned_value(report.weights.path_ns));
+    json.field("sum_ns");
+    json.integer(unsigned_value(report.weights.sum_ns));
+    json.end_object();
+
+    // One clock per cost, and each block names its own: a reader that found
+    // `clean_ns` under `launch` and assumed the events timed the instantiate
+    // would be reading a number about a different thing.
+    const ShapeCostBlock& shape = report.shape_cost;
+    json.field("shape_cost");
+    json.begin_object();
+    json.field("unit");
+    json.text("ns");
+    json.field("launch");
+    json.begin_object();
+    json.field("clock");
+    json.text("cuda-events");
+    json.field("warmup_runs");
+    json.integer(shape.launch_warmup_runs);
+    json.field("measure_runs");
+    json.integer(shape.launch_measure_runs);
+    json.field("clean_median_ns");
+    json.integer(shape.launch_clean_ns);
+    json.field("clean_min_ns");
+    json.integer(shape.launch_clean_min_ns);
+    json.field("clean_max_ns");
+    json.integer(shape.launch_clean_max_ns);
+    json.field("pingpong_median_ns");
+    json.integer(shape.launch_pingpong_ns);
+    json.field("pingpong_min_ns");
+    json.integer(shape.launch_pingpong_min_ns);
+    json.field("pingpong_max_ns");
+    json.integer(shape.launch_pingpong_max_ns);
+    json.field("delta_median_ns");
+    json.integer(shape.launch_delta_ns);
+    json.end_object();
+    json.field("instantiate");
+    json.begin_object();
+    json.field("clock");
+    json.text("steady_clock");
+    json.field("warmup_runs");
+    json.integer(shape.instantiate_warmup_runs);
+    json.field("measure_runs");
+    json.integer(shape.instantiate_measure_runs);
+    json.field("clean_median_ns");
+    json.integer(shape.instantiate_clean_ns);
+    json.field("pingpong_median_ns");
+    json.integer(shape.instantiate_pingpong_ns);
+    json.field("delta_median_ns");
+    json.integer(shape.instantiate_delta_ns);
+    json.end_object();
     json.end_object();
 
     const PoolConfigRecord& pool = report.pool.config;

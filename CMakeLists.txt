@@ -148,6 +148,7 @@ if(QTOOLKIT_DEMO_WITH_CUDA)
         demo/main.cu
         demo/workload.cu
         demo/ablation.cu
+        demo/shape_cost.cu
         demo/graph_stage.cpp
         demo/advise_stage.cpp
     )

@@ -9,7 +9,8 @@ each one has exactly one owner: a number that is not in `artifacts/report.json` 
 | 2 | graph.json → `report.graph` | `artifacts/report.json` (block `graph`) | implemented (M2) |
 | 3 | clean graph → cuda-timer → `report.weights` | `artifacts/weights.json` | implemented (M3) |
 | 4 | workload → `artifacts/trace.jsonl` → poolkit_advise | `artifacts/advise.json` | implemented (M4) |
-| 5 | the five artifacts → `report.json` → `qtoolkit_verify` | `artifacts/report.json` | M5 |
+| 5 | both graphs → cuda-timer → `report.shape_cost` | `artifacts/report.json` (block `shape_cost`) | implemented |
+| 6 | the five artifacts → `report.json` → `qtoolkit_verify` | `artifacts/report.json` | M5 |
 
 This file records what the code does at each boundary, and why it does it that way: the artifact each
 stage writes, the one number it owns, and the assumption it does not close.
@@ -126,7 +127,38 @@ free completes (`docs/advise.md` §8). The two names exist so that nobody reads 
 process and reads the `--json` it writes. `demo/advise_stage.cpp` parses that document with the same
 strict reader the verifier will use: a missing field is an error, never a zero.
 
-## 5. The verifier
+## 5. The shape's price
+
+The ablation measures one node at a time on the clean graph. That answers "which node is expensive"; it
+does not answer "what does the wrong shape cost". `demo/shape_cost.cu` answers the second question with
+the two graphs both alive: one exec per shape, launched whole, no node enabled or disabled.
+
+Two clocks, because the two costs are not the same kind of thing:
+
+- **the launch** is asynchronous, so it is timed with `cuda_timer::Timer` on the ablation's protocol —
+  10 warm-up runs, 100 measured, median — and the block carries the launch's `min` and `max` beside the
+  median. The two shapes are launched inside one loop, alternating which one goes first. Two separate
+  sweeps measure the card twice, and the two orders disagreed in sign between runs; interleaved, a clock
+  that drifts during the minute moves both shapes together instead of landing in the delta. The delta is
+  then the measured quantity, and it is the only reason the number is worth quoting;
+- **the instantiation** is a host call and never touches a stream, so a pair of CUDA events would time
+  the empty stream. It is timed with `std::chrono::steady_clock` around `cudaGraphInstantiate`, 5
+  warm-up and 50 measured, the exec destroyed outside the window. The block names the clock, so nobody
+  can read a host measurement as a device one.
+
+The deltas are stored, not derived by a reader, and a negative delta is a legitimate answer: the report
+carries it instead of hiding it. The verifier (its check 6) redoes the subtraction, holds the launch to
+the ablation's run counts, and refuses a median outside its own `[min, max]`.
+
+**What the number says here, and what it does not.** On the reference card the pingpong costs 10,192 ns
+more per launch and 9,100 ns more to instantiate. That is much less than the difference between
+`sum_ns` and `path_ns` — the work the clean shape overlaps on paper — and the gap is the finding: a
+4 MiB kernel already fills this GPU, so the clean graph's two branches never ran at the same time. What
+the pingpong pays is dependency overhead and one more instantiation, not lost overlap. On a graph of
+small kernels the same three levels would cost the sum. The block is a measurement of this workload; it
+is not a price list for topologies.
+
+## 6. The verifier
 
 `qtoolkit_verify` reads `report.json` and rebuilds every number it can from the other committed
 files, with no toolkit linked and no GPU touched:
@@ -138,8 +170,12 @@ files, with no toolkit linked and no GPU touched:
 3. `trace.jsonl`, parsed and replayed on `SimBackend` with the table the report's `advise` block
    recommends, against `report.advise.ops`, `allocs`, `peak_sim_bytes` and `peak_blocks`;
 4. the arithmetic: for every id, `weights.json[id] == max(0, median_ns[id] - zero_point_ns)` from the
-   report's own medians, and `clamped` equal to the number of zeros;
-5. the four pins against `cmake/pins.cmake`.
+   report's own medians, `clamped` equal to the number of zeros, and `sum_ns` equal to the sum of the
+   table;
+5. the four pins against `cmake/pins.cmake` — or the `pins.cmake` beside the binary, when the verifier
+   runs from the release archive and has no build tree to look at;
+6. the shape's price: both medians, both deltas, each delta equal to the subtraction of the pair beside
+   it, the launch on the ablation's run counts, and each median inside its own `[min, max]`.
 
 Exit 0 means every comparison held. Exit 1 names the comparison that failed, with the value the
 report claims and the value the artifact gives. Exit 2 means cannot decide — a missing or unreadable

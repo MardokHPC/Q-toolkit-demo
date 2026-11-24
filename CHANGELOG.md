@@ -4,6 +4,35 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-11-24
+
+### Added
+
+- The shape's price. `report.shape_cost` measures the clean and the pingpong graph
+  as whole execs — one `cudaGraphExec_t` per shape, launched 10 + 100 times with
+  cuda-timer's `Timer`, and 50 `cudaGraphInstantiate` calls on the host clock,
+  because instantiation never touches a stream — and stores both medians, the
+  launch's `min` and `max`, and the two deltas. The two shapes are launched inside
+  one loop, alternating which one goes first: two separate sweeps measured the card
+  twice and disagreed in sign between runs. On the reference card the pingpong
+  costs 10,192 ns more per launch and 9,100 ns more to instantiate; the README and
+  `docs/pipeline.md` explain why that is far less than the node weights suggest.
+- `weights.sum_ns`: the sum of every node's weight, beside the critical path. The
+  verifier recomputes it from `weights.json`; `sum_ns - path_ns` is the work the
+  clean shape overlaps on paper.
+- `qtoolkit_verify` check 6: each delta equals the subtraction of its pair, the
+  launch carries the ablation's run counts, and each median sits inside its own
+  `[min, max]`.
+- `qtoolkit_verify` resolves `pins.cmake` at runtime — `QTOOLKIT_PINS_FILE`, then
+  the file beside the executable, then the build tree, then the checkout — so a
+  release archive with no build tree can still run check 5.
+
+### Changed
+
+- `report.json` is schema version 2. The `shape_cost` block is required, and a
+  verifier that reads 1 cannot check it, so the number is not cosmetic.
+- `qtoolkit_verify` reads schema 2 and answers 2 on a report that says 1.
+
 ## [0.1.0] - 2026-11-23
 
 ### Added
