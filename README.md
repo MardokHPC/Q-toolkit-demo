@@ -123,11 +123,23 @@ Exit `0` means every comparison held. `1` names the comparison that failed, with
 it cannot decide — a missing artifact, or pins that disagree with the file — because a verifier that
 answers without being able to look is worse than one that says so.
 
-## What it is not
+## Why
 
-Not a fifth tool, not a wrapper: the four formats stay visible as files you can open. Not a benchmark of
-the four — it composes them. It replaces an afternoon of running four terminals by hand with one command
-and one diffable file.
+NVIDIA's official tools — Nsight Systems and Nsight Compute — provide deep, visual profiling that goes
+far beyond what this pipeline attempts to measure. However, interactive GUI profilers are built for
+human inspection during optimization, not for automated regressions in CI.
+
+These four tools are designed specifically for headless automation and deterministic verification:
+
+- **Machine-readable by default.** Instead of parsing proprietary report formats or manually inspecting
+  timelines, every stage outputs plain, diffable JSON and JSONL artifacts that live directly in version
+  control.
+- **CI-friendly verification.** While profiling requires target hardware, structural invariants (graph
+  topology, redundant edges, pool sizing, and timing arithmetic) can be re-verified on a standard
+  CPU-only runner via `qtoolkit_verify` on every pull request.
+- **Fail-fast regressions.** By turning profiling data into strict assertions, topology bloat or memory
+  spikes break the build automatically — catching performance and structural regressions before they
+  require a manual profiling session.
 
 ## Limits
 
