@@ -98,12 +98,12 @@ jobs:
             python: python3
             # The archive must run on a machine that never built it: libstdc++
             # and libgcc travel inside, glibc is the runner's 2.35.
-            linker: -DCMAKE_EXE_LINKER_FLAGS=-static-libstdc++ -static-libgcc
+            linker: -static-libstdc++ -static-libgcc
           - os: windows-2022
             platform: windows-x64
             binary: build/Release/qtoolkit_verify.exe
             python: python
-            linker: -DCMAKE_EXE_LINKER_FLAGS=
+            linker: ""
     steps:
       - uses: actions/checkout@v4
 
@@ -112,7 +112,7 @@ jobs:
           cmake -S . -B build
           -DCMAKE_BUILD_TYPE=Release
           -DQTOOLKIT_DEMO_WITH_CUDA=OFF
-          ${{ matrix.linker }}
+          "-DCMAKE_EXE_LINKER_FLAGS=${{ matrix.linker }}"
 
       - name: Build the verifier
         run: cmake --build build --config Release --target qtoolkit_verify
